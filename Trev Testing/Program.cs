@@ -3,6 +3,7 @@ using PuppeteerExtraSharp.Plugins.ExtraStealth;
 using PuppeteerExtraSharp.Plugins.Recaptcha;
 using PuppeteerExtraSharp;
 using PuppeteerSharp;
+using PuppeteerExtraSharp.Plugins.Recaptcha.Provider.AntiCaptcha;
 
 var extra = new PuppeteerExtra();
 
@@ -23,10 +24,10 @@ var browser = await Puppeteer.LaunchAsync(new LaunchOptions
 
 var page = await browser.NewPageAsync();
 
-await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
+await page.GoToAsync("https://daddybug.net/Identity/Account/Login");
+//await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
 
 await Task.Delay(3000);
 
-var trev = new Recaptcha(null, null);
-
-await trev.GetKeyAsync(page);
+var recaptchaPlugin = new RecaptchaPlugin(new AntiCaptcha("af5e36b189e0ec2654d382b11a5e5d08"));
+var recaptchaResult = await recaptchaPlugin.SolveCaptchaAsync(page);
