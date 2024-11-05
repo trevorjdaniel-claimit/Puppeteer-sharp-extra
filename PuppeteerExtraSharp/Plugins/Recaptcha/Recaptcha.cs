@@ -44,19 +44,27 @@ namespace PuppeteerExtraSharp.Plugins.Recaptcha
 
         public async Task<string> GetKeyAsync(IPage page)
         {
-            var element =
-                await page.QuerySelectorAsync("iframe[src^='https://www.google.com/recaptcha/api2/anchor'][name^=\"a-\"]");
+            //await page.ReloadAsync();
+            try
+            {
+                var element =
+                    page.QuerySelectorAsync("iframe[src^='https://www.google.com/recaptcha/api2/anchor'][name^=\"a-\"]").Result;
 
-            if (element == null)
-                throw new CaptchaException(page.Url, "Recaptcha key not found!");
+                if (element == null)
+                    throw new CaptchaException(page.Url, "Recaptcha key not found!");
 
-            var src = await element.GetPropertyAsync("src");
+                var src = await element.GetPropertyAsync("src");
 
-            if (src == null)
-                throw new CaptchaException(page.Url, "Recaptcha key not found!");
+                if (src == null)
+                    throw new CaptchaException(page.Url, "Recaptcha key not found!");
 
-            var key = HttpUtility.ParseQueryString(src.ToString()).Get("k");
-            return key;
+                var key = HttpUtility.ParseQueryString(src.ToString()).Get("k");
+                return key;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
         }
 
         public async Task<string> GetSolutionAsync(string key, string urlPage)
