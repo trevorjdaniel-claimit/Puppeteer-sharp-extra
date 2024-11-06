@@ -24,10 +24,17 @@ var browser = await Puppeteer.LaunchAsync(new LaunchOptions
 
 var page = await browser.NewPageAsync();
 
-await page.GoToAsync("https://daddybug.net/Identity/Account/Login");
-//await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
+await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
+//await page.GoToAsync("https://www.google.com/recaptcha/api2/demo");
 
-await Task.Delay(3000);
+await page.WaitForNetworkIdleAsync();
+
+//await Task.Delay(3000);
+
+//var service = new Recaptcha(null, null);
+//await service.WriteToInput(page, "sddffdfdfdfs");
 
 var recaptchaPlugin = new RecaptchaPlugin(new AntiCaptcha("af5e36b189e0ec2654d382b11a5e5d08"));
 var recaptchaResult = await recaptchaPlugin.SolveCaptchaAsync(page);
+
+var trev = "";

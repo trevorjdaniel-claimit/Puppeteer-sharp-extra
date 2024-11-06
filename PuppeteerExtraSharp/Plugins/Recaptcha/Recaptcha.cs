@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using PuppeteerExtraSharp.Plugins.Recaptcha.Provider;
@@ -24,7 +23,7 @@ namespace PuppeteerExtraSharp.Plugins.Recaptcha
         {
             try
             {
-                var key = await GetKeyAsync(page);
+                var key = GetKeyAsync(page);
                 var solution = await GetSolutionAsync(key, page.Url);
                 await WriteToInput(page, solution);
 
@@ -44,32 +43,40 @@ namespace PuppeteerExtraSharp.Plugins.Recaptcha
 
         }
 
-        public async Task<string> GetKeyAsync(IPage page)
+        public string GetKeyAsync(IPage page)
         {
-            IElementHandle element = await page.QuerySelectorAsync("iframe[src^='https://www.google.com/recaptcha/api2/anchor'][name^=\"a-\"]");
-
-            string siteKey = null;
-
-            if (element == null)
+            string key = string.Empty;
+            var captchaFrame = page.Frames.Where(x => x.Url.Contains("recaptcha")).FirstOrDefault();
+            if (captchaFrame != null)
             {
-                IFrame frame = page.Frames.Single(f => f.Url.Contains("https://www.google.com/recaptcha/api2/anchor"));
-
-                siteKey = HttpUtility.ParseQueryString(frame.Url).Get("k");
+                key = HttpUtility.ParseQueryString(captchaFrame.Url).Get("k");
             }
             else
             {
-                var src = await element.GetPropertyAsync("src");
-
-                if (src == null)
-                    throw new CaptchaException(page.Url, "Recaptcha key not found!");
-
-                siteKey = HttpUtility.ParseQueryString(src.ToString()).Get("k");
+                throw new Exception("ReCaptcha frame not found");
             }
+            return key;
 
-            if (siteKey == null)
-                throw new CaptchaException(page.Url, "No site key found!");
+            //try
+            //{
+            //    var element =
+            //        page.QuerySelectorAsync("iframe[src^='https://www.google.com/recaptcha/api2/anchor'][name^=\"a-\"]").Result;
 
-            return siteKey;
+            //    if (element == null)
+            //        throw new CaptchaException(page.Url, "Recaptcha key not found!");
+
+            //    var src = await element.GetPropertyAsync("src");
+
+            //    if (src == null)
+            //        throw new CaptchaException(page.Url, "Recaptcha key not found!");
+
+            //    var key = HttpUtility.ParseQueryString(src.ToString()).Get("k");
+            //    return key;
+            //}
+            //catch (Exception ex)
+            //{
+            //    return null;
+            //}
         }
 
         public async Task<string> GetSolutionAsync(string key, string urlPage)
@@ -77,74 +84,42 @@ namespace PuppeteerExtraSharp.Plugins.Recaptcha
             return await _provider.GetSolution(key, urlPage);
         }
 
+        public async Task<IFrame> GetFrame(IPage page, string content)
+        {
+            IFrame frame = null;
+
+            // loop through the frames checking the content
+            foreach (var currentFrame in page.Frames)
+            {
+                var frameContent = await currentFrame.GetContentAsync();
+                if (frameContent.Contains(content))
+                    frame = currentFrame;
+            }
+
+            return frame;
+        }
+
         public async Task WriteToInput(IPage page, string value)
         {
-            string script = ResourcesReader.ReadFile(GetType().Namespace + ".Scripts.EnterRecaptchaCallBackScript.js");
+            // enter the code into the page
+            var containingFrame = await GetFrame(page, "g-recaptcha-response");
+            var recaptchaResponse = await containingFrame.QuerySelectorAsync("#g-recaptcha-response");
+            await recaptchaResponse.EvaluateFunctionAsync($"() => {{document.getElementById('g-recaptcha-response').innerHTML='{value}'}}");
+
+            // read the local js file
+            var script = ResourcesReader.ReadFile(this.GetType().Namespace + ".Scripts.EnterRecaptchaCallBackScript.js");
+
+            // find the captcha frame
+            var captchaFrame = await GetFrame(page, "name=\"captchaFrame\"");
+            var captchaFramsHead = await captchaFrame.QuerySelectorAllAsync("head");
 
             try
             {
-                await page.EvaluateFunctionAsync(
-                      $"() => {{document.getElementById('g-recaptcha-response').innerHTML='{value}'}}");
-
-                try
-                {
-                    await page.EvaluateFunctionAsync($@"(value) => {{{script}}}", value);
-                }
-                catch
-                {
-                    throw new InvalidOperationException("Unable to execute JS against the captcha response element");
-                }
+                await captchaFrame.EvaluateFunctionAsync($@"(value) => {{{script}}}", value);
             }
-            catch(Exception)
+            catch
             {
-                IFrame[] frames = [.. page.Frames.Where(f => f.Url.Contains("salesforce-sites"))];
-
-                IFrame found = null;
-
-                foreach (IFrame frame in frames)
-                {
-                    if (frame.Name.Equals("captchaFrame"))
-                    {
-                        found = frame;
-                    }
-                }
-
-                if (found == null)
-                {
-                    throw new InvalidOperationException("Unable to locate captcha frame after solution.");
-                }
-
-                IElementHandle responseElement = await found.QuerySelectorAsync("#g-recaptcha-response");
-
-                await responseElement.EvaluateFunctionAsync(
-                      $"() => {{document.getElementById('g-recaptcha-response').innerHTML='{value}'}}");
-
-                try
-                {
-                    //await page.EvaluateFunctionAsync($@"(value) => {{{js}}}", value);
-                    await found.EvaluateFunctionAsync($@"(value) => {{{script}}}", value);
-                }
-                catch
-                {
-                    throw new InvalidOperationException("Unable to execute JS against the captcha response element");
-                }
-
-                //bool success = false;
-                //foreach (IFrame frame in page.Frames)
-                //{
-                //    try
-                //    {
-                //        await frame.EvaluateFunctionAsync($@"(value) => {{{js}}}", value);
-
-                //        success = true;
-
-                //        break;
-                //    }
-                //    catch
-                //    {
-
-                //    }
-                //}
+                // ignored
             }
         }
     }

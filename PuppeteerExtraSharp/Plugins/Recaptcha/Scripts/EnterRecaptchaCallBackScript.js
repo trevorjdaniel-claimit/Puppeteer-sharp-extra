@@ -43,11 +43,16 @@
     }
 })()
 
+console.log("The result is: " + result);
+console.log(result.function);
+
 if (typeof (result.function) == 'function') {
     console.log("call funcation as type if function");
     result.function(value)
 }
 else {
     console.log("evaluate function directly");
+    console.log(window);
+    console.log(value);
     eval(result.function).call(window, value);
 }
