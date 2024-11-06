@@ -24,10 +24,12 @@ var browser = await Puppeteer.LaunchAsync(new LaunchOptions
 
 var page = await browser.NewPageAsync();
 
-await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
-//await page.GoToAsync("https://www.google.com/recaptcha/api2/demo");
+//await page.GoToAsync("https://dpdgroupuk.my.salesforce-sites.com/Support/ClaimForm?recordId=vDdL5sPWRKjfChagE%2Buqyjv9zyaIEiWjwETxZy5yTTQ%3D");
+await page.GoToAsync("https://www.google.com/recaptcha/api2/demo");
 
 await page.WaitForNetworkIdleAsync();
+
+//await page.TypeAsync(".slds-input", "3006995");
 
 //await Task.Delay(3000);
 

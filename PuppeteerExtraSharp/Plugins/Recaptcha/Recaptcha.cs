@@ -111,15 +111,27 @@ namespace PuppeteerExtraSharp.Plugins.Recaptcha
 
             // find the captcha frame
             var captchaFrame = await GetFrame(page, "name=\"captchaFrame\"");
-            var captchaFramsHead = await captchaFrame.QuerySelectorAllAsync("head");
 
-            try
+            // sometimes captachaFrame is not present
+            if (captchaFrame == null)
+            {
+                captchaFrame = await GetFrame(page, "bframe");
+            }
+
+            var childFrame = captchaFrame.ChildFrames.FirstOrDefault();
+
+            //For DPD, check inline JS. This may work for others but the JS seems to be custom
+            bool hasInlineJS = childFrame != null 
+                ? (await childFrame.GetContentAsync()).Contains("validateForm()")
+                : false;
+
+            if (hasInlineJS)
+            {
+                await childFrame.EvaluateFunctionAsync($@"() => validateForm()");
+            }
+            else
             {
                 await captchaFrame.EvaluateFunctionAsync($@"(value) => {{{script}}}", value);
-            }
-            catch
-            {
-                // ignored
             }
         }
     }
